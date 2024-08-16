@@ -73,3 +73,10 @@ export const fetchProfile = async () => {
   if (!profile) return redirect('/profile/create');
   return profile;
 };
+
+export const updateProfileAction = async (
+  prevState: any,
+  formData: FormData
+): Promise<{ message: string }> => {
+  return { message: 'update profile action' };
+};
