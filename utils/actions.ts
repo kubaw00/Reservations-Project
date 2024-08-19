@@ -1,9 +1,10 @@
 'use server';
 
-import { profileSchema } from '@/utils/shemas';
+import { profileSchema, validateWithZodSchema } from '@/utils/shemas';
 import { redirect } from 'next/navigation';
 import { currentUser, auth, clerkClient } from '@clerk/nextjs/server';
 import db from '@/utils/db';
+import { revalidatePath } from 'next/cache';
 
 export const createProfileAction = async (
   prevState: any,
@@ -14,7 +15,7 @@ export const createProfileAction = async (
     if (!user) throw new Error('Please login to create a profile');
 
     const rawData = Object.fromEntries(formData);
-    const validatedFields = profileSchema.parse(rawData);
+    const validatedFields = validateWithZodSchema(profileSchema, rawData);
 
     await db.profile.create({
       data: {
@@ -30,10 +31,7 @@ export const createProfileAction = async (
       },
     });
   } catch (error) {
-    console.log(error);
-    return {
-      message: error instanceof Error ? error.message : 'An error occurred',
-    };
+    return renderError(error);
   }
   redirect('/');
 };
@@ -62,6 +60,13 @@ const getAuthUser = async () => {
   return user;
 };
 
+const renderError = (error: unknown): { message: string } => {
+  console.log(error);
+  return {
+    message: error instanceof Error ? error.message : 'An error occurred',
+  };
+};
+
 export const fetchProfile = async () => {
   const user = await getAuthUser();
 
@@ -78,5 +83,21 @@ export const updateProfileAction = async (
   prevState: any,
   formData: FormData
 ): Promise<{ message: string }> => {
-  return { message: 'update profile action' };
+  try {
+    const user = await getAuthUser();
+    const rawData = Object.fromEntries(formData);
+
+    const validatedFields = validateWithZodSchema(profileSchema, rawData);
+
+    await db.profile.update({
+      where: {
+        clerkId: user.id,
+      },
+      data: validatedFields,
+    });
+    revalidatePath('/profile');
+    return { message: 'Profile updated successfully' };
+  } catch (error) {
+    return renderError(error);
+  }
 };
