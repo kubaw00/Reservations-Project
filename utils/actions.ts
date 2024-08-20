@@ -3,12 +3,14 @@
 import {
   imageSchema,
   profileSchema,
+  propertySchema,
   validateWithZodSchema,
 } from '@/utils/shemas';
 import { redirect } from 'next/navigation';
 import { currentUser, auth, clerkClient } from '@clerk/nextjs/server';
 import db from '@/utils/db';
 import { revalidatePath } from 'next/cache';
+import { uploadImage } from './supabase';
 
 export const createProfileAction = async (
   prevState: any,
@@ -109,9 +111,38 @@ export const updateProfileAction = async (
 export const updateProfileImageAction = async (
   prevState: any,
   formData: FormData
+) => {
+  const user = await getAuthUser();
+  try {
+    const image = formData.get('image') as File;
+    const validatedFields = validateWithZodSchema(imageSchema, { image });
+    const fullPath = await uploadImage(validatedFields.image);
+
+    await db.profile.update({
+      where: {
+        clerkId: user.id,
+      },
+      data: {
+        profileImage: fullPath,
+      },
+    });
+    revalidatePath('/profile');
+    return { message: 'Profile image updated successfully' };
+  } catch (error) {
+    return renderError(error);
+  }
+};
+
+export const createPropertyAction = async (
+  prevState: any,
+  formData: FormData
 ): Promise<{ message: string }> => {
-  const image = formData.get('image') as File;
-  const validatedFields = validateWithZodSchema(imageSchema, { image });
-  console.log(validatedFields);
-  return { message: 'Profile image updated successfully' };
+  const user = await getAuthUser();
+  try {
+    const rawData = Object.fromEntries(formData);
+    const validatedFields = validateWithZodSchema(propertySchema, rawData);
+  } catch (error) {
+    return renderError(error);
+  }
+  redirect('/');
 };

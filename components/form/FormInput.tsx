@@ -28,6 +28,7 @@ function FormInput({
         defaultValue={defaultValue}
         placeholder={placeholder}
         required
+        className='mt-2'
       />
     </div>
   );
