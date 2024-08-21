@@ -19,8 +19,6 @@ export const uploadImage = async (image: File) => {
       cacheControl: '3600',
     });
   if (!data) throw new Error('Image upload failed');
-  console.log(
-    supabase.storage.from(bucket).getPublicUrl(newName).data.publicUrl
-  );
+
   return supabase.storage.from(bucket).getPublicUrl(newName).data.publicUrl;
 };
